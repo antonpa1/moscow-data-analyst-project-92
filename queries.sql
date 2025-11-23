@@ -1,100 +1,92 @@
---customers_count
-select
-    count(customer_id) as customers_count  
-    -- здесь считаю общее количество покупателей по их id
+---customers_count
+-- считаю общее количество покупателей по id
+select count(customer_id) as customers_count
 from customers;
 
 --top_10_total_income
+-- формирую топ-10 продавцов по общей выручке
 select
-    e.first_name || ' ' || e.last_name as seller,  
-    -- собираю полное имя продавца в одну строку
-    count(s.sales_id) as operations,               
-    -- считаю количество продаж (операций)
-    floor(sum(p.price * s.quantity)) as income     
-    -- считаю выручку по формуле цена * количество
+    e.first_name || ' ' || e.last_name as seller,
+    count(s.sales_id) as operations,
+    floor(sum(p.price * s.quantity)) as income
 from sales as s
 left join employees as e
     on s.sales_person_id = e.employee_id
 left join products as p
-    on s.product_id = p.product_id  
-    -- подтягиваю к продажам данные о продавце и товаре
+    on s.product_id = p.product_id
 group by
     e.employee_id,
     e.first_name,
-    e.last_name  -- группирую данные по конкретному продавцу
+    e.last_name
 order by
-    income desc  -- сортирую продавцов по выручке по убыванию
-limit 10;        -- оставляю только топ-10 строк
+    income desc
+limit 10;
 
 --lowest_average_income
+-- считаю среднюю выручку по каждому продавцу
 with seller_avg as (
     select
         e.employee_id,
-        e.first_name || ' ' || e.last_name as seller,  
-        -- формирую полное имя продавца
-        avg(p.price * s.quantity) as avg_income_raw   
-        -- считаю среднюю выручку продавца за одну сделку
+        e.first_name || ' ' || e.last_name as seller,
+        avg(p.price * s.quantity) as avg_income_raw
     from sales as s
     left join employees as e
         on s.sales_person_id = e.employee_id
     left join products as p
-        on s.product_id = p.product_id  
-        -- присоединяю цену и данные о продавце к продажам
+        on s.product_id = p.product_id
     group by
         e.employee_id,
         e.first_name,
-        e.last_name  -- группирую по каждому продавцу
-),  -- во временной таблице seller_avg считаю среднюю выручку по каждому продавцу
+        e.last_name
+),
+
+-- считаю среднюю выручку среди всех продавцов
 overall_avg as (
-    select
-        avg(avg_income_raw) as glob_avg_incom
+    select avg(avg_income_raw) as glob_avg_incom
     from seller_avg
-)  -- во временной таблице overall_avg считаю среднюю выручку среди всех продавцов
+)
+
+-- выбираю только тех продавцов,
+-- у кого средняя выручка ниже общей средней
 select
     sa.seller,
-    floor(sa.avg_income_raw) as average_income  
-    -- округляю среднюю выручку продавца вниз до целого
+    floor(sa.avg_income_raw) as average_income
 from seller_avg as sa
 left join overall_avg as oa
-    on 1 = 1  
-    -- соединяю таблицы, так как overall_avg всегда одна строка
+    on 1 = 1
 where
-    sa.avg_income_raw < oa.glob_avg_incom  
-    -- оставляю только тех, кто зарабатывает ниже среднего
+    sa.avg_income_raw < oa.glob_avg_incom
 order by
-    average_income;  -- сортирую по средней выручке по возрастанию
+    average_income;
 
 --day_of_the_week_income
+-- считаю выручку по дням недели для каждого продавца
 select
-    e.first_name || ' ' || e.last_name as seller, 
--- собираю полное имя продавца
-    lower(trim(to_char(s.sale_date, 'day'))) as day_of_week,  
-    -- вытаскиваю название дня недели из даты
-    floor(sum(p.price * s.quantity)) as income  
-    -- считаю суммарную выручку за этот день недели
+    e.first_name || ' ' || e.last_name as seller,
+    lower(trim(to_char(s.sale_date, 'day'))) as day_of_week,
+    floor(sum(p.price * s.quantity)) as income
 from sales as s
 left join employees as e
-    on s.sales_person_id = e.employee_id  
-    -- соединяю к продажам данные о продавце
+    on s.sales_person_id = e.employee_id
 left join products as p
-    on s.product_id = p.product_id       
-    -- и данные о товаре с ценой
+    on s.product_id = p.product_id
 group by
     seller,
     lower(trim(to_char(s.sale_date, 'day'))),
     extract(isodow from s.sale_date)
 order by
     extract(isodow from s.sale_date),
-    seller;  -- сортирую по номеру дня недели и по имени продавца
+    seller;
 
 --age_groups
+-- считаю количество покупателей в возрастных группах
 select
     age_category,
-    count(*) as age_count 
-    -- считаю количество покупателей в каждой возрастной группе
+    count(*) as age_count
 from (
+    -- раскладываю возраст по диапазонам
     select
-        case  -- раскладываю возраст по диапазонам из таблицы customers
+        case
             when age between 16 and 25 then '16-25'
             when age between 26 and 40 then '26-40'
             when age > 40 then '40+'
@@ -102,36 +94,34 @@ from (
     from customers
 ) as c
 where
-    age_category is not null  
-    -- отбрасываю строки, где возраст не попал ни в одну категорию
+    age_category is not null
 group by
-    age_category  -- объединяю покупателей по возрастным категориям
+    age_category
 order by
-    case age_category  -- задаю порядок отображения возрастных групп
+    case age_category
         when '16-25' then 1
         when '26-40' then 2
         when '40+' then 3
     end;
 
 --customers_by_month
+-- считаю количество уникальных покупателей и выручку по месяцам
 select
-    to_char(s.sale_date, 'YYYY-MM') as selling_month,  
-    -- привожу дату продажи к формату ГОД-МЕСЯЦ
-    count(distinct s.customer_id) as total_customers,  
-    -- считаю количество уникальных покупателей в месяце
-    floor(sum(p.price * s.quantity)) as income         
-    -- считаю выручку за месяц и округляю вниз
+    to_char(s.sale_date, 'YYYY-MM') as selling_month,
+    count(distinct s.customer_id) as total_customers,
+    floor(sum(p.price * s.quantity)) as income
 from sales as s
 left join products as p
-    on s.product_id = p.product_id  -- добавляю к продажам цену товара
+    on s.product_id = p.product_id
 group by
-    to_char(s.sale_date, 'YYYY-MM')  -- группирую данные по месяцу продажи
+    to_char(s.sale_date, 'YYYY-MM')
 order by
-    selling_month;  -- сортирую месяцы по возрастанию
+    selling_month;
 
 --special_offer
-with sales_cte as (  
--- создаю временную таблицу, чтобы к каждой продаже добавить цену и клиента
+-- временная таблица: добавляю цену товара к продаже
+-- и нумерую покупки внутри каждого покупателя
+with sales_cte as (
     select
         s.sales_id,
         s.customer_id,
@@ -139,35 +129,30 @@ with sales_cte as (
         s.sale_date,
         p.price,
         row_number() over (
-            partition by s.customer_id  -- нумерую покупки внутри каждого покупателя
+            partition by s.customer_id
             order by
                 s.sale_date,
-                s.sales_id  
-                -- сначала по дате, потом по id продажи
+                s.sales_id
         ) as rn
     from sales as s
     left join products as p
-        on s.product_id = p.product_id  -- добавляю цену товара к продаже
+        on s.product_id = p.product_id
     where
-        p.price = 0  -- беру только акционные покупки с ценой 0
+        p.price = 0
 )
+
+-- выбираю первую акционную покупку каждого покупателя
 select
-    c.first_name || ' ' || c.last_name as customer, 
-    -- собираю полное имя покупателя
     sc.sale_date,
-    e.first_name || ' ' || e.last_name as seller    
--- собираю полное имя продавца
+    c.first_name || ' ' || c.last_name as customer,
+    e.first_name || ' ' || e.last_name as seller
 from sales_cte as sc
 left join customers as c
-    on sc.customer_id = c.customer_id  
-    -- подтягиваю данные о покупателе
+    on sc.customer_id = c.customer_id
 left join employees as e
-    on sc.sales_person_id = e.employee_id  
-    -- подтягиваю данные о продавце
+    on sc.sales_person_id = e.employee_id
 where
-    sc.rn = 1  
-    -- оставляю только первую акционную покупку для каждого покупателя
+    sc.rn = 1
 order by
     c.customer_id,
-    sc.sale_date;  -- упорядочиваю по id покупателя и дате покупки
-
+    sc.sale_date;
