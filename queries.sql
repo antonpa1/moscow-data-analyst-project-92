@@ -1,10 +1,10 @@
--- customers_count
+---customers_count
 -- считаю общее количество покупателей по id
 select
     count(customer_id) as customers_count
 from customers;
 
--- top_10_total_income
+--top_10_total_income
 -- формирую топ-10 продавцов по общей выручке
 select
     e.first_name || ' ' || e.last_name as seller,
@@ -23,7 +23,7 @@ order by
     income desc
 limit 10;
 
--- lowest_average_income
+--lowest_average_income
 -- считаю среднюю выручку по каждому продавцу
 with seller_avg as (
     select
@@ -39,28 +39,19 @@ with seller_avg as (
         e.employee_id,
         e.first_name,
         e.last_name
-),
--- считаю среднюю выручку среди всех продавцов
-overall_avg as (
-    select
-        avg(avg_income_raw) as glob_avg_incom
-    from seller_avg
 )
 
--- выбираю только тех продавцов,
--- у кого средняя выручка ниже общей средней
+-- сравниваю среднюю выручку продавца с общей средней по всем
 select
     sa.seller,
     floor(sa.avg_income_raw) as average_income
 from seller_avg as sa
-left join overall_avg as oa
-    on 1 = 1
 where
-    sa.avg_income_raw < oa.glob_avg_incom
+    sa.avg_income_raw < (select avg(avg_income_raw) from seller_avg)
 order by
     average_income;
 
--- day_of_the_week_income
+--day_of_the_week_income
 -- считаю выручку по дням недели для каждого продавца
 select
     e.first_name || ' ' || e.last_name as seller,
@@ -79,7 +70,7 @@ order by
     extract(isodow from s.sale_date),
     seller;
 
--- age_groups
+--age_groups
 -- считаю количество покупателей в возрастных группах
 select
     case
@@ -94,7 +85,7 @@ group by
 order by
     age_category;
 
--- customers_by_month
+--customers_by_month
 -- считаю количество уникальных покупателей и выручку по месяцам
 select
     to_char(s.sale_date, 'YYYY-MM') as selling_month,
@@ -108,7 +99,7 @@ group by
 order by
     selling_month;
 
--- special_offer
+--special_offer
 -- временная таблица: добавляю цену товара к продаже
 -- и нумерую покупки внутри каждого покупателя
 with sales_cte as (
