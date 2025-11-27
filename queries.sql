@@ -81,18 +81,17 @@ order by
 --age_groups
 -- считаю количество покупателей в возрастных группах
 select
-     	case
-            when age between 16 and 25 then '16-25'
-            when age between 26 and 40 then '26-40'
-            else '40+'
-        end as age_category,
-        count(customer_id) AS age_count
+    case
+        when age between 16 and 25 then '16-25'
+        when age between 26 and 40 then '26-40'
+        else '40+'
+    end as age_category,
+    count(customer_id) as age_count
 from customers
 group by
     age_category
 order by
     age_category;
-
 
 --customers_by_month
 -- считаю количество уникальных покупателей и выручку по месяцам
