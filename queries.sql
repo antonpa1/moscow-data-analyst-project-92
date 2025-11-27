@@ -139,4 +139,3 @@ where
 order by
     c.customer_id,
     sc.sale_date;
-	
