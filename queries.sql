@@ -1,7 +1,6 @@
 -- customers_count
 -- считаю общее количество покупателей по id
-select
-    count(customer_id) as customers_count
+select count(customer_id) as customers_count
 from customers;
 
 -- top_10_total_income
@@ -48,8 +47,7 @@ select
 from seller_avg as sa
 where
     sa.avg_income_raw < (
-        select
-            avg(sa2.avg_income_raw)
+        select avg(sa2.avg_income_raw)
         from seller_avg as sa2
     )
 order by
